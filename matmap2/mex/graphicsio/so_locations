@@ -1,0 +1,9 @@
+libgraphicsio.so \
+		:st = .text 0x5ffd0000, 0x00020000:\
+		:st = .data 0x5fff0000, 0x00010000:
+libfgraphicsio.so \
+		:st = .text 0x5ffa0000, 0x00020000:\
+		:st = .data 0x5ffc0000, 0x00010000:
+libgraphicsio64.so \
+		:st = .text 0x0000003ffffd0000, 0x0000000000020000:\
+		:st = .data 0x0000003fffff0000, 0x0000000000010000:

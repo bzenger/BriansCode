@@ -1,0 +1,2 @@
+ /Applications/MATLAB6p5p1/bin/matlab -nodesktop -r "d=pwd;cd('/mom/u/jeroen/matmapbeta');matmap;cd(d)" -nosplash
+

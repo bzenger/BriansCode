@@ -1,0 +1,135 @@
+#!/usr/local/bin/make
+#
+# A makefile for the graphicsio and fgraphicsio libraries.
+#
+# Builds and installs archive and shared versions of the libraries.
+#
+
+.PHONY: all depend clean veryclean install installlibs installincludes
+SDIR=./
+INSTALLDIR=/usr/local/lib32
+INSTALL_LNS_DIR=/usr/local/lib
+INCLUDEINSTALLDIR=/usr/local/include
+CC=CC
+CFLAGS = -g -DUNIX -woff 1178
+F77=f77
+FFLAGS =  -g
+RM = /bin/rm -f
+
+CCSRCS = gi_utilities.c \
+gi_graphicsio.c \
+gi_elements.c \
+gi_nodes.c \
+gi_surfaces.c \
+gi_timeseries.c \
+gi_leadfiducials.c \
+gi_rewrites.c
+
+INCLUDES = gi_elements.h \
+gi_graphicsio.h \
+gi_leadfiducials.h \
+gi_nodes.h \
+gi_rewrites.h \
+gi_surfaces.h \
+gi_timeseries.h \
+gi_utilities.h \
+graphicsio.h \
+fgraphicsio.fh \
+gi_list.h
+
+ARLIBS = libgraphicsio.a \
+libfgraphicsio.a
+
+SOLIBS = libgraphicsio.so \
+libfgraphicsio.so
+
+F77SRCS = fgraphicsio.f
+
+CCOBJS = $(CCSRCS:.c=.o)
+F77OBJS = $(F77SRCS:.f=.o)
+
+all: $(ARLIBS) $(SOLIBS)
+
+libgraphicsio.so : $(CCOBJS)
+	ld -shared $(CCOBJS) -o $@
+
+libgraphicsio.a : $(CCOBJS)
+	ar cr $@ $(CCOBJS)
+
+# Old 32 bit version of the library
+o32:	libgraphicsioo32.a libgraphicsioo32.so
+
+RM = /bin/rm -f
+CC = CC
+libgraphicsioo32.a : $(CCOBJS)
+	for filename in ${CCOBJS}; do \
+	${RM} filename ; \
+	done
+	for filename in ${CCSRCS:.c= }; do \
+	${CC} ${CFLAGS} -c -32 -g -DUNIX $${filename}.c -o $${filename}.o ; \
+	done
+	ar cr $@ $(CCOBJS)
+
+libgraphicsioo32.so : $(CCOBJS)
+	ld -o32 -shared $(CCOBJS) -o $@
+
+# New 64-bit version of the library
+
+64:	libgraphicsio64.a libgraphicsio64.so
+
+libgraphicsio64.a : $(CCOBJS)
+	for filename in ${CCOBJS}; do \
+	${RM} filename ; \
+	done
+	for filename in ${CCSRCS:.c= }; do \
+	${CC} ${CFLAGS} -c -64 -g -DUNIX $${filename}.c -o $${filename}.o ; \
+	done
+	ar cr $@ $(CCOBJS)
+
+libgraphicsio64.so : $(CCOBJS)
+	ld -64 -shared $(CCOBJS) -o $@
+
+# Fortran interface to the librar
+
+libfgraphicsio.a : $(F77OBJS) $(CCOBJS)
+	ar cr $@ $(F77OBJS) $(CCOBJS)
+
+libfgraphicsio.so : libfgraphicsio.a
+	ld -shared -elf -all libfgraphicsio.a -o $@
+
+# Utilities
+
+install: installlibs installlns installincludes
+
+installlibs:
+	install -m 644 -O -f $(INSTALLDIR) $(ARLIBS)
+	install -m 755 -O -f $(INSTALLDIR) $(SOLIBS)
+
+installlns:
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libgraphicsio.a libgraphicsio.a
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libfgraphicsio.a libfgraphicsio.a
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libgraphicsio.so libgraphicsio.so
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libfgraphicsio.so libfgraphicsio.so
+
+installincludes:
+	install -m 444 -O -f $(INCLUDEINSTALLDIR) $(INCLUDES)
+
+veryclean: clean
+	-$(RM) *.so
+	-$(RM) *.a
+
+clean:
+	-$(RM) *.o
+	-$(RM) *~
+	-$(RM) \#*
+	-$(RM) *.d
+	-$(RM) a.out
+	-$(RM) core
+
+%.d: %.c
+	touch tmp.d; \
+	makedepend -- $(CFLAGS) -- -ftmp.d $< ; \
+	sed -e 's/\($*\)\.o[ :]*/\1.o $@ : /g' tmp.d > $@ ; \
+	rm -f tmp.d tmp.d.bak
+
+include $(CCSRCS:.c=.d)

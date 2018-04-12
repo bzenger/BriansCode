@@ -1,0 +1,152 @@
+# Makefile.vc
+#
+# Written by Chris Moulding, May 2000
+
+!if ("$(CVRTI_LIBS)" == "1")
+!include ..\map3d\Makefile.vc.config
+!else
+!include Makefile.vc.config
+!endif
+
+#######################	 EDIT HERE  #########################
+
+LIBNAME  = libgraphicsio
+
+OBJS     = gi_utilities.o \
+	gi_graphicsio.o \
+	gi_elements.o \
+	gi_nodes.o \
+	gi_surfaces.o \
+	gi_timeseries.o \
+	gi_leadfiducials.o \
+	gi_rewrites.o
+
+LIBS     = 
+
+LIBPATHS = 
+		   
+INCPATHS = -I.\winfix -I..\cutil -I..\gfile\lib \
+           -I..\fids -I..\graphicsio -I..\tedutils\fi -I..\tedutils\numseq
+
+CFLAGS   = -DVERSION=$(MAP3DVERSION) -D__MACHINENAME__=\"$(COMPUTERNAME)\" $(WARNING) \
+            -DBYTE_ORDER=1 -DLITTLE_ENDIAN=1
+
+LFLAGS   = 
+
+########################################################################################
+#
+# Set processor architecture specific flags
+#
+
+!if ("$(PROCESSOR_ARCHITECTURE)"=="x86")
+ARCH_CFLAGS      = -D_X86_=1
+DLLENTRY         = @12
+ARCH_LFLAGS      = -MACHINE:IX86
+!elseif ("$(PROCESSOR_ARCHITECTURE)"=="ALPHA")
+ARCH_CFLAGS      = -D_ALPHA_=1
+DLLENTRY         = 
+ARCH_LFLAGS      = -MACHINE:ALPHA
+!endif
+
+########################################################################################
+#
+# Set version (debug or release) specific flags
+#
+
+!if ("$(VERSION)"=="debug")
+APPENDIX         = d
+!if ("$(TYPE)" == "STATIC")
+VERSION_CFLAGS   = -Zi -Od -GZ -DDEBUG=1
+VERSION_LFLAGS   = -DEBUGTYPE:BOTH
+EXTENSION        = lib
+!else
+VERSION_CFLAGS   = -Zi -Od -GZ -DDEBUG=1 -DBUILD_graphicsio
+VERSION_LFLAGS   = -DEBUG -DEBUGTYPE:BOTH -PDBTYPE:SEPT
+EXTENSION        = dll
+!endif
+!else
+APPENDIX         =
+!if ("$(TYPE)" == "STATIC")
+VERSION_CFLAGS   = -O2
+VERSION_LFLAGS   = 
+EXTENSION        = lib
+!else
+VERSION_CFLAGS   = -O2 -DBUILD_graphicsio
+VERSION_LFLAGS   = -RELEASE
+EXTENSION        = dll
+!endif
+!endif
+
+########################################################################################
+#
+# Set development tool (Visual C++) specific flags, paths and libraries
+#
+
+DEV_CFLAGS       = -c -nologo -D_WIN32 -MD$(APPENDIX)
+!if ("$(TYPE)" == "STATIC")
+DEV_LFLAGS       = -nologo -nodefaultlib:libc
+!else
+DEV_LFLAGS       = -nologo -nodefaultlib:libc -dll
+!endif
+DEV_LIBPATHS     = -LIBPATH:$(DEV_DIRS)\lib -LIBPATH:$(DEV_DIRS)\mfc\lib -LIBPATH:$(GLUT_DIRS)\lib
+DEV_INCPATHS     = -I$(DEV_DIRS)\include -I$(DEV_DIRS)\mfc\include
+DEV_LIBS         = 
+
+
+########################################################################################
+#
+# Concatenate flags to build .exe binaries
+#
+
+EXE_CFLAGS       = $(DEV_CFLAGS) $(ARCH_CFLAGS) $(VERSION_CFLAGS)
+EXE_LFLAGS       = $(DEV_LFLAGS) $(ARCH_LFLAGS) $(VERSION_LFLAGS)
+                   
+########################################################################################
+#
+# Concatenate all paths and libraries
+#
+
+LIBPATHS         = $(DEV_LIBPATHS) $(LIBPATHS)
+INCPATHS         = $(DEV_INCPATHS) $(INCPATHS)
+LIBS             = $(DEV_LIBS) $(LIBS)
+
+########################################################################################
+#
+# The description blocks
+#
+
+.SUFFIXES: .c .cc
+
+all: $(LIBNAME)$(APPENDIX).$(EXTENSION)
+
+$(LIBNAME)$(APPENDIX).$(EXTENSION): $(OBJS)
+	$(LINK) $(EXE_LFLAGS) $(LFLAGS) $(LIBPATHS) $(LIBS) $(OBJS) -out:$(LIBNAME)$(APPENDIX).$(EXTENSION)
+
+.c.o:
+	$(C) $(EXE_CFLAGS) $(CFLAGS) $(INCPATHS) -Fo$*.o -TP $<
+
+.cc.o:
+	$(CC) $(EXE_CFLAGS) $(CFLAGS) $(INCPATHS) -Fo$*.o -TP $<
+
+##############################################################################
+#
+# Utilities
+#
+
+clean:
+	-$(RM) *.o   $(BB)
+	-$(RM) *.lib $(BB)
+	-$(RM) *.exp $(BB)
+	-$(RM) *.pdb $(BB)
+	-$(RM) *.idb $(BB)
+	-$(RM) *.ilk $(BB)
+	-$(RM) *.pch $(BB)
+
+binclean: 
+	-$(RM) $(EXENAME).dll $(BB)
+	
+allclean: clean binclean
+
+
+
+

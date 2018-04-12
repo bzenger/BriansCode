@@ -1,0 +1,120 @@
+#!/usr/local/bin/make
+#
+#  Mac OSX Version
+#
+# A makefile for the graphicsio and fgraphicsio libraries.
+#
+# Builds and installs archive and shared versions of the libraries.
+#
+######################################################################
+
+.PHONY: all depend clean veryclean install installlibs installincludes
+SDIR=./
+TARGET = libgraphicsio
+CCSRCS = gi_utilities.c \
+	gi_graphicsio.c \
+	gi_elements.c \
+	gi_nodes.c \
+	gi_surfaces.c \
+	gi_timeseries.c \
+	gi_leadfiducials.c \
+	gi_rewrites.c
+
+INCLUDES = gi_elements.h \
+	gi_graphicsio.h \
+	gi_leadfiducials.h \
+	gi_nodes.h \
+	gi_rewrites.h \
+	gi_surfaces.h \
+	gi_timeseries.h \
+	gi_utilities.h \
+	graphicsio.h 
+
+######################################################################
+
+# For Mac OSX
+INSTALLDIR=/usr/local/lib
+INSTALL_LNS_DIR=/usr/local/lib
+INCLUDEINSTALLDIR=/usr/local/include
+CC=gcc
+CFLAGS = -c -g  -DOSX
+RM = /bin/rm -f
+RANLIB = ranlib
+
+ARLIBS = ${TARGET}.a 
+SOLIBS = ${TARGET}.so 
+CCOBJS = $(CCSRCS:.c=.o)
+
+
+######################################################################
+
+all: $(ARLIBS) #$(SOLIBS)
+
+${TARGET}.so : $(CCOBJS)
+	ld -shared $(CCOBJS) -o $@
+
+${TARGET}.a : $(CCOBJS)
+	ar cr $@ $(CCOBJS)
+	${RANLIB} $@
+
+
+# Fortran interface to the library
+
+libfgraphicsio.a : $(F77OBJS) $(CCOBJS)
+	ar cr $@ $(F77OBJS) $(CCOBJS)
+
+libfgraphicsio.so : libfgraphicsio.a
+	ld -shared -elf -all libfgraphicsio.a -o $@
+
+
+######################################################################
+# Utilities
+
+install: installlibs installlns installincludes
+
+installlibs:
+	install -m 644 -O -f $(INSTALLDIR) $(ARLIBS)
+	install -m 755 -O -f $(INSTALLDIR) $(SOLIBS)
+
+installlns:
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/${TARGET}.a ${TARGET}.a
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libfgraphicsio.a libfgraphicsio.a
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/${TARGET}.so ${TARGET}.so
+	install -O -f $(INSTALL_LNS_DIR) -lns $(INSTALLDIR)/libfgraphicsio.so libfgraphicsio.so
+
+installincludes:
+	install -m 444 -O -f $(INCLUDEINSTALLDIR) $(INCLUDES)
+
+veryclean: clean
+	-$(RM) *.so
+	-$(RM) *.a
+
+clean:
+	-$(RM) *.o
+	-$(RM) *~
+	-$(RM) \#*
+	-$(RM) *.d
+	-$(RM) a.out
+	-$(RM) core
+
+tar maketar: 
+	echo "Tarring files into  ${TARGET}-source.tar "
+	tar cvf ${TARGET}-source.tar ${CCSRCS} ${INCLUDES} \
+	 Makefile fgraphicsio.f fgraphicsio.fh
+
+.c.o:
+	$(CC) $(CFLAGS) $<
+.f.o:
+	$(F77) $(FFLAGS) $<
+
+# %.d: %.c
+# 	touch tmp.d; \
+# 	makedepend -- $(CFLAGS) -- -ftmp.d $< ; \
+# 	sed -e 's/\($*\)\.o[ :]*/\1.o $@ : /g' tmp.d > $@ ; \
+# 	rm -f tmp.d tmp.d.bak
+
+#include $(CCSRCS:.c=.d)
+
+depend:
+	makedepend -Y -- $(CFLAGS) -- $(CCOBJS:.o=.c)
+
